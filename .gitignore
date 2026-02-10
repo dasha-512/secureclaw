@@ -1,0 +1,28 @@
+# Secrets — NEVER commit
+conf.json
+.env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Build output (regenerated via npm run build)
+secureclaw/dist/
+
+# Test coverage
+secureclaw/coverage/
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# npm pack artifacts
+*.tgz
+
+# IDE
+.vscode/
+.idea/
+
+# Claude state
+.claude/

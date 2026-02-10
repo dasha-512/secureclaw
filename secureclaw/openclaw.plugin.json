@@ -1,0 +1,32 @@
+{
+  "id": "secureclaw",
+  "name": "SecureClaw",
+  "description": "Automated security hardening for OpenClaw",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "cost": {
+        "type": "object",
+        "properties": {
+          "hourlyLimitUsd": { "type": "number" },
+          "dailyLimitUsd": { "type": "number" },
+          "monthlyLimitUsd": { "type": "number" },
+          "circuitBreakerEnabled": { "type": "boolean" }
+        }
+      },
+      "autoHarden": {
+        "type": "boolean",
+        "description": "Automatically apply hardening on gateway start"
+      }
+    }
+  },
+  "uiHints": {
+    "cost.hourlyLimitUsd": { "label": "Hourly Cost Limit (USD)", "help": "Maximum allowed spend per hour" },
+    "cost.dailyLimitUsd": { "label": "Daily Cost Limit (USD)" },
+    "cost.monthlyLimitUsd": { "label": "Monthly Cost Limit (USD)" },
+    "cost.circuitBreakerEnabled": { "label": "Circuit Breaker", "help": "Auto-pause sessions when cost limit exceeded" },
+    "autoHarden": { "label": "Auto-Harden", "help": "Automatically harden on gateway start" }
+  }
+}
