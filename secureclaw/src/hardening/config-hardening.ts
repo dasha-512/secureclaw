@@ -37,10 +37,10 @@ export const configHardening: HardeningModule = {
         severity: 'CRITICAL',
         category: 'execution',
         title: 'Execution approvals disabled',
-        description: 'Will set exec.approvals to "always".',
+        description: 'Execution approvals are disabled. This allows commands to run without user confirmation.',
         evidence: 'exec.approvals = "off"',
-        remediation: 'Set exec.approvals to "always"',
-        autoFixable: true,
+        remediation: 'Manually set exec.approvals to "always" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)',
+        autoFixable: false,
         references: [],
         owaspAsi: 'ASI02',
       });
@@ -52,10 +52,10 @@ export const configHardening: HardeningModule = {
         severity: 'MEDIUM',
         category: 'execution',
         title: 'Sandbox not set to all',
-        description: 'Will set sandbox.mode to "all".',
+        description: 'Sandbox mode is not set to "all". Not all commands run in a sandboxed environment.',
         evidence: `sandbox.mode = "${ctx.config.sandbox?.mode ?? 'undefined'}"`,
-        remediation: 'Set sandbox.mode to "all"',
-        autoFixable: true,
+        remediation: 'Manually set sandbox.mode to "all" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)',
+        autoFixable: false,
         references: [],
         owaspAsi: 'ASI05',
       });
@@ -98,32 +98,12 @@ export const configHardening: HardeningModule = {
 
       const config = await readConfig(ctx.stateDir);
 
-      // 1. Enable approval mode
-      if (!config.exec) config.exec = {};
-      const oldApprovals = config.exec.approvals;
-      if (oldApprovals !== 'always') {
-        config.exec.approvals = 'always';
-        applied.push({
-          id: 'config-approvals',
-          description: 'Set exec.approvals to "always"',
-          before: oldApprovals ?? 'undefined',
-          after: 'always',
-        });
-      }
+      // NOTE: We only write keys that OpenClaw's runtime schema accepts.
+      // Keys like exec.approvals, exec.autoApprove, sandbox.mode are NOT
+      // valid in OpenClaw's config and would cause "Invalid config" errors.
+      // Those settings are reported as audit findings with manual remediation.
 
-      // 2. Force sandbox execution
-      if (!config.sandbox) config.sandbox = {};
-      const oldSandboxMode = config.sandbox.mode;
-      if (oldSandboxMode !== 'all') {
-        config.sandbox.mode = 'all';
-        applied.push({
-          id: 'config-sandbox-mode',
-          description: 'Set sandbox.mode to "all"',
-          before: oldSandboxMode ?? 'undefined',
-          after: 'all',
-        });
-      }
-
+      // 1. Set tools.exec.host to sandbox (valid OpenClaw key)
       if (!config.tools) config.tools = {};
       if (!config.tools.exec) config.tools.exec = {};
       const oldExecHost = config.tools.exec.host;
@@ -137,23 +117,7 @@ export const configHardening: HardeningModule = {
         });
       }
 
-      // 3. Disable auto-approval
-      if (!config.exec.autoApprove || config.exec.autoApprove.length > 0) {
-        config.exec.autoApprove = [];
-        applied.push({
-          id: 'config-auto-approve',
-          description: 'Cleared exec.autoApprove list',
-          before: 'had auto-approved commands',
-          after: '[] (nothing auto-approved)',
-        });
-      }
-
-      // 4. Set DM policy to pairing for open channels
-      // Note: Channel configs are typically separate but we handle them via the main config
-      // In a real deployment, each channel has its own config.
-      // We'll store the fix intent in secureclaw config.
-
-      // 5. Enable DM session isolation
+      // 2. Enable DM session isolation (valid OpenClaw key)
       if (!config.session) config.session = {};
       const oldDmScope = config.session.dmScope;
       if (oldDmScope !== 'per-channel-peer') {
@@ -166,7 +130,7 @@ export const configHardening: HardeningModule = {
         });
       }
 
-      // 6. Enable sensitive log redaction
+      // 3. Enable sensitive log redaction (valid OpenClaw key)
       if (!config.logging) config.logging = {};
       const oldRedact = config.logging.redactSensitive;
       if (oldRedact !== 'tools') {
@@ -176,6 +140,28 @@ export const configHardening: HardeningModule = {
           description: 'Enabled sensitive log redaction',
           before: oldRedact ?? 'undefined',
           after: 'tools',
+        });
+      }
+
+      // 4. Strip keys that are NOT in OpenClaw's config schema to avoid
+      //    "Invalid config" / "Unrecognized key" errors on startup.
+      const configAny = config as Record<string, unknown>;
+      if (configAny['exec']) {
+        delete configAny['exec'];
+        applied.push({
+          id: 'config-strip-exec',
+          description: 'Removed invalid root-level "exec" key (not in OpenClaw schema)',
+          before: 'present',
+          after: 'removed',
+        });
+      }
+      if (configAny['sandbox']) {
+        delete configAny['sandbox'];
+        applied.push({
+          id: 'config-strip-sandbox',
+          description: 'Removed invalid root-level "sandbox" key (not in OpenClaw schema)',
+          before: 'present',
+          after: 'removed',
         });
       }
 

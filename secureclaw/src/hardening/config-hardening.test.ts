@@ -41,7 +41,7 @@ describe('config-hardening', () => {
     };
   }
 
-  it('sets exec.approvals to always', async () => {
+  it('does NOT write exec.approvals (not in OpenClaw schema)', async () => {
     const configPath = path.join(tmpDir, 'openclaw.json');
     await fs.writeFile(configPath, JSON.stringify({ exec: { approvals: 'off' } }), 'utf-8');
 
@@ -49,10 +49,11 @@ describe('config-hardening', () => {
     await configHardening.fix(ctx, backupDir);
 
     const updated = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-    expect(updated.exec.approvals).toBe('always');
+    // exec key should not be created/modified by the hardener
+    expect(updated.exec).toBeUndefined();
   });
 
-  it('sets sandbox.mode to all', async () => {
+  it('does NOT write sandbox.mode (not in OpenClaw schema)', async () => {
     const configPath = path.join(tmpDir, 'openclaw.json');
     await fs.writeFile(configPath, JSON.stringify({ sandbox: { mode: 'off' } }), 'utf-8');
 
@@ -60,7 +61,8 @@ describe('config-hardening', () => {
     await configHardening.fix(ctx, backupDir);
 
     const updated = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-    expect(updated.sandbox.mode).toBe('all');
+    // sandbox key should not be created/modified by the hardener
+    expect(updated.sandbox).toBeUndefined();
   });
 
   it('sets tools.exec.host to sandbox', async () => {
@@ -96,7 +98,7 @@ describe('config-hardening', () => {
     expect(updated.logging.redactSensitive).toBe('tools');
   });
 
-  it('clears autoApprove list', async () => {
+  it('does NOT write exec.autoApprove (not in OpenClaw schema)', async () => {
     const configPath = path.join(tmpDir, 'openclaw.json');
     await fs.writeFile(configPath, JSON.stringify({ exec: { autoApprove: ['ls', 'cat'] } }), 'utf-8');
 
@@ -104,17 +106,34 @@ describe('config-hardening', () => {
     await configHardening.fix(ctx, backupDir);
 
     const updated = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-    expect(updated.exec.autoApprove).toEqual([]);
+    // exec key should not be created/modified by the hardener
+    expect(updated.exec).toBeUndefined();
   });
 
   it('creates backup before changes', async () => {
     const configPath = path.join(tmpDir, 'openclaw.json');
-    await fs.writeFile(configPath, JSON.stringify({ exec: { approvals: 'off' } }), 'utf-8');
+    await fs.writeFile(configPath, JSON.stringify({ tools: { exec: { host: 'gateway' } } }), 'utf-8');
 
-    const ctx = makeCtx({ exec: { approvals: 'off' } });
+    const ctx = makeCtx({ tools: { exec: { host: 'gateway' } } });
     await configHardening.fix(ctx, backupDir);
 
     const backupExists = await fs.access(path.join(backupDir, 'openclaw-config.json')).then(() => true).catch(() => false);
     expect(backupExists).toBe(true);
+  });
+
+  it('check() reports exec.approvals=off as non-auto-fixable', async () => {
+    const ctx = makeCtx({ exec: { approvals: 'off' } });
+    const findings = await configHardening.check(ctx);
+    const finding = findings.find(f => f.id === 'SC-EXEC-001');
+    expect(finding).toBeDefined();
+    expect(finding!.autoFixable).toBe(false);
+  });
+
+  it('check() reports sandbox.mode as non-auto-fixable', async () => {
+    const ctx = makeCtx({ sandbox: { mode: 'off' } });
+    const findings = await configHardening.check(ctx);
+    const finding = findings.find(f => f.id === 'SC-EXEC-003');
+    expect(finding).toBeDefined();
+    expect(finding!.autoFixable).toBe(false);
   });
 });

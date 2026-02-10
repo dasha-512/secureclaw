@@ -338,8 +338,8 @@ export async function auditGateway(ctx: AuditContext, deep = false): Promise<Aud
       title: 'mDNS broadcasting in full mode',
       description: 'mDNS is broadcasting sensitive instance information on the local network.',
       evidence: `gateway.mdns.mode = "${gw.mdns.mode}"`,
-      remediation: 'Set gateway.mdns.mode to "minimal"',
-      autoFixable: true,
+      remediation: 'Manually set gateway.mdns.mode to "minimal" (not auto-fixable — key not in OpenClaw config schema)',
+      autoFixable: false,
       references: [],
       owaspAsi: 'ASI05',
     });
@@ -640,8 +640,8 @@ export async function auditExecution(ctx: AuditContext): Promise<AuditFinding[]>
       title: 'Execution approvals disabled',
       description: 'exec.approvals is set to "off". The agent can execute arbitrary commands without user confirmation.',
       evidence: 'exec.approvals = "off"',
-      remediation: 'Set exec.approvals to "always" in openclaw.json',
-      autoFixable: true,
+      remediation: 'Manually set exec.approvals to "always" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)',
+      autoFixable: false,
       references: ['CVE-2026-25253'],
       owaspAsi: 'ASI02',
     });
@@ -672,8 +672,8 @@ export async function auditExecution(ctx: AuditContext): Promise<AuditFinding[]>
       title: 'Sandbox mode not set to "all"',
       description: `Sandbox mode is "${ctx.config.sandbox?.mode ?? 'undefined'}". Not all commands run in a sandboxed environment.`,
       evidence: `sandbox.mode = "${ctx.config.sandbox?.mode ?? 'undefined'}"`,
-      remediation: 'Set sandbox.mode to "all" in openclaw.json',
-      autoFixable: true,
+      remediation: 'Manually set sandbox.mode to "all" in your OpenClaw settings (not auto-fixable — key not in OpenClaw config schema)',
+      autoFixable: false,
       references: [],
       owaspAsi: 'ASI05',
     });

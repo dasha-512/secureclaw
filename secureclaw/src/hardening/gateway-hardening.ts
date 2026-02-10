@@ -116,10 +116,10 @@ export const gatewayHardening: HardeningModule = {
         severity: 'MEDIUM',
         category: 'gateway',
         title: 'mDNS in full mode',
-        description: 'Will set mDNS to minimal mode.',
+        description: 'mDNS is broadcasting in full mode, exposing service information to the local network.',
         evidence: `mdns.mode = "${gw.mdns.mode}"`,
-        remediation: 'Will set to "minimal"',
-        autoFixable: true,
+        remediation: 'Manually set gateway.mdns.mode to "minimal" (not auto-fixable — key not in OpenClaw config schema)',
+        autoFixable: false,
         references: [],
         owaspAsi: 'ASI05',
       });
@@ -206,16 +206,16 @@ export const gatewayHardening: HardeningModule = {
         });
       }
 
-      // 4. Set mDNS to minimal
-      if (!config.gateway.mdns) config.gateway.mdns = {};
-      const oldMdns = config.gateway.mdns.mode;
-      if (oldMdns !== 'minimal') {
-        config.gateway.mdns.mode = 'minimal';
+      // 4. Strip gateway.mdns — NOT a valid OpenClaw config key.
+      // mDNS findings are reported as non-auto-fixable in the auditor.
+      if (config.gateway.mdns) {
+        const gwAny = config.gateway as Record<string, unknown>;
+        delete gwAny['mdns'];
         applied.push({
-          id: 'gw-mdns',
-          description: 'Set mDNS to minimal mode',
-          before: oldMdns ?? 'undefined',
-          after: 'minimal',
+          id: 'gw-strip-mdns',
+          description: 'Removed invalid "gateway.mdns" key (not in OpenClaw schema)',
+          before: 'present',
+          after: 'removed',
         });
       }
 

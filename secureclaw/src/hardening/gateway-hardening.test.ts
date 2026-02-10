@@ -96,13 +96,12 @@ describe('gateway-hardening', () => {
     expect(updatedConfig.gateway.controlUi.allowInsecureAuth).toBe(false);
   });
 
-  it('fix() is idempotent', async () => {
+  it('fix() is idempotent when config already hardened', async () => {
     const configPath = path.join(tmpDir, 'openclaw.json');
     await fs.writeFile(configPath, JSON.stringify({
       gateway: {
         bind: 'loopback',
         auth: { mode: 'password', password: 'a'.repeat(64) },
-        mdns: { mode: 'minimal' },
         controlUi: { dangerouslyDisableDeviceAuth: false, allowInsecureAuth: false },
         trustedProxies: [],
       },
@@ -112,7 +111,6 @@ describe('gateway-hardening', () => {
       gateway: {
         bind: 'loopback',
         auth: { mode: 'password', password: 'a'.repeat(64) },
-        mdns: { mode: 'minimal' },
         controlUi: { dangerouslyDisableDeviceAuth: false, allowInsecureAuth: false },
         trustedProxies: [],
       },
@@ -122,5 +120,37 @@ describe('gateway-hardening', () => {
     await fs.mkdir(backupDir2, { recursive: true });
     const result = await gatewayHardening.fix(ctx, backupDir2);
     expect(result.applied).toHaveLength(0);
+  });
+
+  it('fix() strips gateway.mdns key (not in OpenClaw schema)', async () => {
+    const configPath = path.join(tmpDir, 'openclaw.json');
+    await fs.writeFile(configPath, JSON.stringify({
+      gateway: {
+        bind: 'loopback',
+        auth: { mode: 'password', password: 'a'.repeat(64) },
+        mdns: { mode: 'full' },
+        controlUi: {},
+        trustedProxies: [],
+      },
+    }), 'utf-8');
+
+    const ctx = makeCtx({
+      gateway: {
+        bind: 'loopback',
+        auth: { mode: 'password', password: 'a'.repeat(64) },
+        mdns: { mode: 'full' },
+        controlUi: {},
+        trustedProxies: [],
+      },
+    });
+
+    const backupDir2 = path.join(tmpDir, 'backup2');
+    await fs.mkdir(backupDir2, { recursive: true });
+    const result = await gatewayHardening.fix(ctx, backupDir2);
+
+    // mdns key should be stripped
+    const updated = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+    expect(updated.gateway.mdns).toBeUndefined();
+    expect(result.applied.some(a => a.id === 'gw-strip-mdns')).toBe(true);
   });
 });

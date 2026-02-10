@@ -309,11 +309,14 @@ describe('SecureClaw Integration', { timeout: 30000 }, () => {
       expect(updated.gateway.bind).toBe('loopback');
       expect(updated.gateway.auth.mode).toBe('password');
       expect(updated.gateway.auth.password.length).toBeGreaterThanOrEqual(64);
-      expect(updated.exec.approvals).toBe('always');
-      expect(updated.sandbox.mode).toBe('all');
+      expect(updated.tools.exec.host).toBe('sandbox');
+      // exec, sandbox, and gateway.mdns are NOT valid OpenClaw config keys
+      // The hardener strips them to avoid "Invalid config" errors
+      expect(updated.exec).toBeUndefined();
+      expect(updated.sandbox).toBeUndefined();
+      expect(updated.gateway.mdns).toBeUndefined();
       expect(updated.gateway.controlUi.dangerouslyDisableDeviceAuth).toBe(false);
       expect(updated.gateway.controlUi.allowInsecureAuth).toBe(false);
-      expect(updated.gateway.mdns.mode).toBe('minimal');
     });
 
     it('creates encrypted .env.enc file', async () => {

@@ -73,10 +73,13 @@ describe('hardener', () => {
     const result = await harden({ full: true, context: ctx });
     expect(result.results.length).toBeGreaterThan(0);
 
-    // Check that config was updated
+    // Check that config was updated with valid OpenClaw keys
     const updated = JSON.parse(await fs.readFile(configPath, 'utf-8'));
     expect(updated.gateway.bind).toBe('loopback');
-    expect(updated.exec.approvals).toBe('always');
+    expect(updated.tools.exec.host).toBe('sandbox');
+    // exec and sandbox keys should be stripped (not valid in OpenClaw schema)
+    expect(updated.exec).toBeUndefined();
+    expect(updated.sandbox).toBeUndefined();
   });
 
   it('writes a manifest file', async () => {
