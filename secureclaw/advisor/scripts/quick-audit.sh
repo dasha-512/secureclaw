@@ -17,14 +17,22 @@ if [ -z "$OPENCLAW_DIR" ]; then
   exit 1
 fi
 
-CONFIG="$OPENCLAW_DIR/openclaw.json"
-[ ! -f "$CONFIG" ] && CONFIG="$OPENCLAW_DIR/moltbot.json"
-[ ! -f "$CONFIG" ] && CONFIG="$OPENCLAW_DIR/clawdbot.json"
+CONFIG=""
+for cfg in "$OPENCLAW_DIR/openclaw.json" "$OPENCLAW_DIR/moltbot.json" "$OPENCLAW_DIR/clawdbot.json"; do
+  if [ -f "$cfg" ]; then
+    CONFIG="$cfg"
+    break
+  fi
+done
 
 echo "🔒 SecureClaw Advisor — Quick Security Audit"
 echo "============================================="
 echo "📁 Installation: $OPENCLAW_DIR"
-echo "📄 Config: $CONFIG"
+if [ -z "$CONFIG" ]; then
+  echo "⚠️  Config: NOT FOUND (no openclaw.json, moltbot.json, or clawdbot.json)"
+else
+  echo "📄 Config: $CONFIG"
+fi
 echo ""
 
 CRITICAL=0
@@ -51,21 +59,27 @@ check() {
 }
 
 # Check 1: Gateway bind
-if [ -f "$CONFIG" ] && grep -q '"bind".*"0.0.0.0"' "$CONFIG" 2>/dev/null; then
+if [ -n "$CONFIG" ] && grep -q '"bind".*"0.0.0.0"' "$CONFIG" 2>/dev/null; then
   check "CRITICAL" "Gateway bind address" "FAIL" "Bound to 0.0.0.0 — exposed to network"
+elif [ -z "$CONFIG" ]; then
+  check "CRITICAL" "Gateway bind address" "FAIL" "No config file found — cannot verify"
 else
   check "CRITICAL" "Gateway bind address" "PASS" ""
 fi
 
 # Check 2: Auth token
-if [ -f "$CONFIG" ] && grep -q '"authToken"' "$CONFIG" 2>/dev/null; then
+if [ -z "$CONFIG" ]; then
+  check "CRITICAL" "Gateway authentication" "FAIL" "No config file found — cannot verify"
+elif grep -q '"authToken"' "$CONFIG" 2>/dev/null; then
   check "CRITICAL" "Gateway authentication" "PASS" ""
 else
   check "CRITICAL" "Gateway authentication" "FAIL" "No auth token configured"
 fi
 
 # Check 3: Sandbox mode
-if [ -f "$CONFIG" ] && grep -q '"sandbox".*true' "$CONFIG" 2>/dev/null; then
+if [ -z "$CONFIG" ]; then
+  check "HIGH" "Sandbox mode" "FAIL" "No config file found — cannot verify"
+elif grep -q '"sandbox".*true' "$CONFIG" 2>/dev/null; then
   check "HIGH" "Sandbox mode" "PASS" ""
 else
   check "HIGH" "Sandbox mode" "FAIL" "Sandbox not enabled — commands run on host"
@@ -90,7 +104,7 @@ else
 fi
 
 # Check 6: Plaintext API keys outside .env
-LEAKED_KEYS=$(grep -rl 'sk-ant-\|sk-proj-\|xoxb-\|xoxp-' "$OPENCLAW_DIR/" 2>/dev/null | grep -v '.env' | grep -v 'node_modules' | head -5)
+LEAKED_KEYS=$(grep -rl 'sk-ant-\|sk-proj-\|xoxb-\|xoxp-' "$OPENCLAW_DIR/" 2>/dev/null | grep -v '.env' | grep -v 'node_modules' | grep -v '.secureclaw/' | grep -v 'secureclaw-advisor/' | head -5 || true)
 if [ -z "$LEAKED_KEYS" ]; then
   check "HIGH" "API key exposure" "PASS" ""
 else
@@ -98,7 +112,7 @@ else
 fi
 
 # Check 7: SOUL.md recent modification
-SOUL_MODIFIED=$(find "$OPENCLAW_DIR/SOUL.md" -mmin -60 -print 2>/dev/null)
+SOUL_MODIFIED=$(find "$OPENCLAW_DIR/SOUL.md" -mmin -60 -print 2>/dev/null || true)
 if [ -z "$SOUL_MODIFIED" ]; then
   check "MEDIUM" "SOUL.md integrity" "PASS" ""
 else
@@ -106,7 +120,7 @@ else
 fi
 
 # Check 8: Suspicious skill patterns
-SUSPECT_SKILLS=$(grep -rl 'curl.*|.*sh\|wget.*|.*bash\|eval(' "$OPENCLAW_DIR/skills/" 2>/dev/null | head -5)
+SUSPECT_SKILLS=$(grep -rl 'curl.*|.*sh\|wget.*|.*bash\|eval(' "$OPENCLAW_DIR/skills/" 2>/dev/null | grep -v 'secureclaw-advisor' | head -5 || true)
 if [ -z "$SUSPECT_SKILLS" ]; then
   check "MEDIUM" "Skill safety" "PASS" ""
 else
@@ -114,7 +128,9 @@ else
 fi
 
 # Check 9: Exec approval mode
-if [ -f "$CONFIG" ] && grep -q '"approvals".*"always"' "$CONFIG" 2>/dev/null; then
+if [ -z "$CONFIG" ]; then
+  check "HIGH" "Exec approval mode" "FAIL" "No config file found — cannot verify"
+elif grep -q '"approvals".*"always"' "$CONFIG" 2>/dev/null; then
   check "HIGH" "Exec approval mode" "PASS" ""
 else
   check "HIGH" "Exec approval mode" "FAIL" "Approval mode not set to 'always'"
@@ -137,3 +153,8 @@ fi
 echo ""
 echo "For comprehensive audit + automated hardening, install the SecureClaw plugin:"
 echo "  openclaw plugins install secureclaw"
+
+# Exit non-zero if critical issues found (for CI/automation)
+if [ $CRITICAL -gt 0 ]; then
+  exit 2
+fi

@@ -62,9 +62,14 @@ export async function harden(options: HardenOptions = {}): Promise<{
   // Backup the main config file before any changes
   const configPath = path.join(ctx.stateDir, 'openclaw.json');
   try {
+    await fs.access(configPath);
     await fs.copyFile(configPath, path.join(backupDir, 'openclaw.json.original'));
-  } catch {
-    // Config might not exist yet
+  } catch (err: unknown) {
+    // Only ignore if the file doesn't exist; propagate real I/O errors
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code !== 'ENOENT') {
+      throw new Error(`Failed to backup config before hardening: ${err}`);
+    }
   }
 
   for (const mod of MODULES) {

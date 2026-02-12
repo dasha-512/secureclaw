@@ -17,9 +17,13 @@ if [ -z "$OPENCLAW_DIR" ]; then
   exit 1
 fi
 
-CONFIG="$OPENCLAW_DIR/openclaw.json"
-[ ! -f "$CONFIG" ] && CONFIG="$OPENCLAW_DIR/moltbot.json"
-[ ! -f "$CONFIG" ] && CONFIG="$OPENCLAW_DIR/clawdbot.json"
+CONFIG=""
+for cfg in "$OPENCLAW_DIR/openclaw.json" "$OPENCLAW_DIR/moltbot.json" "$OPENCLAW_DIR/clawdbot.json"; do
+  if [ -f "$cfg" ]; then
+    CONFIG="$cfg"
+    break
+  fi
+done
 
 echo "🔒 SecureClaw Advisor — Quick Hardening"
 echo "========================================"
@@ -29,7 +33,7 @@ echo ""
 CHANGES=0
 
 # 1. Fix gateway bind
-if [ -f "$CONFIG" ] && grep -q '"bind".*"0.0.0.0"' "$CONFIG" 2>/dev/null; then
+if [ -n "$CONFIG" ] && grep -q '"bind".*"0.0.0.0"' "$CONFIG" 2>/dev/null; then
   echo "🔧 Fixing: Gateway bind 0.0.0.0 → 127.0.0.1"
   cp "$CONFIG" "$CONFIG.bak.$(date +%s)"
   sed -i.tmp 's/"bind"[[:space:]]*:[[:space:]]*"0.0.0.0"/"bind": "127.0.0.1"/' "$CONFIG"
@@ -55,14 +59,26 @@ if [ -f "$OPENCLAW_DIR/.env" ]; then
   fi
 fi
 
-# 4. Fix JSON config permissions
-find "$OPENCLAW_DIR" -maxdepth 1 -name "*.json" -exec chmod 600 {} \; 2>/dev/null
-echo "🔧 Set: All JSON config files to 600"
-CHANGES=$((CHANGES + 1))
+# 4. Fix JSON config permissions (only config files, not all JSON)
+JSON_FIXED=0
+for jf in "$OPENCLAW_DIR/openclaw.json" "$OPENCLAW_DIR/moltbot.json" "$OPENCLAW_DIR/clawdbot.json"; do
+  if [ -f "$jf" ]; then
+    JPERMS=$(stat -f '%Lp' "$jf" 2>/dev/null || stat -c '%a' "$jf" 2>/dev/null)
+    if [ "$JPERMS" != "600" ]; then
+      chmod 600 "$jf"
+      JSON_FIXED=$((JSON_FIXED + 1))
+    fi
+  fi
+done
+if [ $JSON_FIXED -gt 0 ]; then
+  echo "🔧 Set: $JSON_FIXED config JSON file(s) to 600"
+  CHANGES=$((CHANGES + 1))
+fi
 
-# 5. Add privacy directives to SOUL.md if missing
+# 5. Add privacy directives to SOUL.md if missing (with backup)
 if [ -f "$OPENCLAW_DIR/SOUL.md" ] && ! grep -q "SecureClaw Privacy" "$OPENCLAW_DIR/SOUL.md" 2>/dev/null; then
   echo "🔧 Adding: Privacy directives to SOUL.md"
+  cp "$OPENCLAW_DIR/SOUL.md" "$OPENCLAW_DIR/SOUL.md.bak.$(date +%s)"
   cat >> "$OPENCLAW_DIR/SOUL.md" << 'PRIVACY'
 
 ## SecureClaw Privacy Directives (Added by SecureClaw Advisor)
@@ -75,24 +91,33 @@ PRIVACY
   CHANGES=$((CHANGES + 1))
 fi
 
-# 6. Create baseline hashes for cognitive files
-echo "🔧 Creating: Baseline hashes for cognitive files"
+# 6. Create baseline hashes for cognitive files (only if no baselines exist yet)
 mkdir -p "$OPENCLAW_DIR/.secureclaw/baselines"
+BASELINE_CREATED=0
 for f in SOUL.md IDENTITY.md TOOLS.md AGENTS.md SECURITY.md MEMORY.md; do
-  if [ -f "$OPENCLAW_DIR/$f" ]; then
+  if [ -f "$OPENCLAW_DIR/$f" ] && [ ! -f "$OPENCLAW_DIR/.secureclaw/baselines/$f.sha256" ]; then
     shasum -a 256 "$OPENCLAW_DIR/$f" > "$OPENCLAW_DIR/.secureclaw/baselines/$f.sha256"
+    BASELINE_CREATED=$((BASELINE_CREATED + 1))
   fi
 done
-CHANGES=$((CHANGES + 1))
+if [ $BASELINE_CREATED -gt 0 ]; then
+  echo "🔧 Created: Baseline hashes for $BASELINE_CREATED cognitive file(s)"
+  CHANGES=$((CHANGES + 1))
+else
+  echo "ℹ️  Baselines already exist (use check-cognitive-integrity.sh to verify)"
+fi
 
 # 7. Create secureclaw advisor state directory
 mkdir -p "$OPENCLAW_DIR/.secureclaw"
-echo "🔧 Created: SecureClaw state directory"
 
 # Summary
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ Applied $CHANGES hardening changes"
+if [ $CHANGES -gt 0 ]; then
+  echo "✅ Applied $CHANGES hardening changes"
+else
+  echo "✅ No changes needed — already hardened"
+fi
 echo ""
 echo "⚠️  NOTE: Some changes require a gateway restart to take effect."
 echo "   Restart: openclaw gateway restart (or kill and restart the process)"

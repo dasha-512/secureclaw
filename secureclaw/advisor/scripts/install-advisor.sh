@@ -3,7 +3,7 @@
 set -euo pipefail
 
 OPENCLAW_DIR=""
-for dir in "$HOME/.openclaw" "$HOME/.moltbot" "$HOME/.clawdbot"; do
+for dir in "$HOME/.openclaw" "$HOME/.moltbot" "$HOME/.clawdbot" "$HOME/clawd"; do
   [ -d "$dir" ] && OPENCLAW_DIR="$dir" && break
 done
 
@@ -15,6 +15,13 @@ SOURCE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 echo "🔒 Installing SecureClaw Advisor skill..."
 echo "   Source: $SOURCE_DIR"
 echo "   Target: $SKILL_DIR"
+
+# Backup existing installation if present
+if [ -d "$SKILL_DIR" ]; then
+  BACKUP_DIR="$SKILL_DIR.bak.$(date +%s)"
+  echo "   ⚠️  Existing installation found — backing up to $(basename "$BACKUP_DIR")"
+  cp -r "$SKILL_DIR" "$BACKUP_DIR"
+fi
 
 mkdir -p "$SKILL_DIR/configs" "$SKILL_DIR/scripts"
 
