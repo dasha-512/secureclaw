@@ -50,7 +50,7 @@ Re-run the installer — it detects the existing version, backs up, and overwrit
 bash skill/scripts/install.sh
 ```
 
-Or via plugin CLI: `openclaw secureclaw skill update`
+Or via plugin CLI: `npx openclaw secureclaw skill update`
 
 ## Uninstall
 
@@ -66,7 +66,7 @@ Actually remove:
 bash ~/.openclaw/skills/secureclaw/scripts/uninstall.sh --force
 ```
 
-Or via plugin CLI: `openclaw secureclaw skill uninstall`
+Or via plugin CLI: `npx openclaw secureclaw skill uninstall`
 
 ## Quick Start
 

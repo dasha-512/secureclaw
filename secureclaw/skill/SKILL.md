@@ -93,6 +93,6 @@ Replace SKILL_DIR with the actual path to this skill:
 - If part of plugin: `~/.openclaw/extensions/secureclaw/skill`
 
 If the SecureClaw plugin is installed, prefer plugin commands:
-- `openclaw secureclaw audit` instead of quick-audit.sh
-- `openclaw secureclaw harden` instead of quick-harden.sh
-- `openclaw secureclaw emergency` instead of emergency-response.sh
+- `npx openclaw secureclaw audit` instead of quick-audit.sh
+- `npx openclaw secureclaw harden` instead of quick-harden.sh
+- `npx openclaw secureclaw emergency` instead of emergency-response.sh

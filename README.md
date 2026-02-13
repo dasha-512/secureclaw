@@ -124,10 +124,10 @@ git clone https://github.com/adversa-ai/secureclaw.git
 cd secureclaw/secureclaw
 npm install
 npm run build
-openclaw plugins install -l .
+npx openclaw plugins install -l .
 ```
 
-The plugin includes the skill. After installing, run `openclaw secureclaw skill install` to deploy the skill files to your agent's workspace.
+The plugin includes the skill. After installing, run `npx openclaw secureclaw skill install` to deploy the skill files to your agent's workspace.
 
 ### Option C: ClawHub
 
@@ -270,10 +270,10 @@ Each finding includes: check ID, severity, OWASP ASI reference, evidence string,
 Run via CLI:
 
 ```sh
-openclaw secureclaw audit            # Standard audit
-openclaw secureclaw audit --deep     # Includes active TCP port probing
-openclaw secureclaw audit --json     # Machine-readable JSON output
-openclaw secureclaw audit --fix      # Auto-apply fixes after audit
+npx openclaw secureclaw audit            # Standard audit
+npx openclaw secureclaw audit --deep     # Includes active TCP port probing
+npx openclaw secureclaw audit --json     # Machine-readable JSON output
+npx openclaw secureclaw audit --fix      # Auto-apply fixes after audit
 ```
 
 ---
@@ -301,8 +301,8 @@ Every destructive change creates a timestamped backup first. The gateway config 
 The plugin provides 5 hardening modules with backup/rollback:
 
 ```sh
-openclaw secureclaw harden --full       # Apply all modules
-openclaw secureclaw harden --rollback   # Revert to last backup
+npx openclaw secureclaw harden --full       # Apply all modules
+npx openclaw secureclaw harden --rollback   # Revert to last backup
 ```
 
 Modules run in priority order: gateway, credentials, config, Docker, network. A manifest file records exactly what was changed and when.
@@ -623,7 +623,7 @@ SecureClaw maps to all 10 categories of the [OWASP Agentic Security Initiative](
 
 When the full plugin is installed, these commands are available:
 
-### openclaw secureclaw audit
+### npx openclaw secureclaw audit
 
 Run the 51-check security audit.
 
@@ -633,7 +633,7 @@ Run the 51-check security audit.
 | `--deep` | Enable active network probes (TCP port scanning) |
 | `--fix` | Automatically apply fixes after the audit completes |
 
-### openclaw secureclaw harden
+### npx openclaw secureclaw harden
 
 Apply hardening across 5 modules (gateway, credentials, config, Docker, network).
 
@@ -642,27 +642,27 @@ Apply hardening across 5 modules (gateway, credentials, config, Docker, network)
 | `--full` | Apply all modules without interactive prompts |
 | `--rollback [timestamp]` | Revert to a previous backup. If no timestamp is given, reverts to the most recent backup. |
 
-### openclaw secureclaw status
+### npx openclaw secureclaw status
 
 Display current security posture: score, monitor status (credential watch, memory integrity, cost tracking), and recent alert count.
 
-### openclaw secureclaw scan-skill \<name\>
+### npx openclaw secureclaw scan-skill \<name\>
 
 Scan a specific skill for malicious patterns before installation. Checks for dynamic execution, credential access, exfiltration endpoints, IOC hash matches, and typosquatting.
 
-### openclaw secureclaw cost-report
+### npx openclaw secureclaw cost-report
 
 Display cost monitoring data: hourly/daily/monthly spend, projections, and whether the circuit breaker has tripped.
 
-### openclaw secureclaw skill install
+### npx openclaw secureclaw skill install
 
 Install the SecureClaw skill to your agent's skills directory. Equivalent to running `install.sh` manually.
 
-### openclaw secureclaw skill update
+### npx openclaw secureclaw skill update
 
 Re-run the skill installer to update to the latest version. Backs up the existing installation.
 
-### openclaw secureclaw skill uninstall
+### npx openclaw secureclaw skill uninstall
 
 Remove the SecureClaw skill. Performs a dry run by default; prompts for confirmation before deletion.
 
@@ -823,7 +823,7 @@ After uninstalling, manually edit `SOUL.md` to remove the `## SecureClaw Privacy
 ### Remove the plugin
 
 ```sh
-openclaw plugins uninstall secureclaw
+npx openclaw plugins uninstall secureclaw
 ```
 
 ### Remove both
