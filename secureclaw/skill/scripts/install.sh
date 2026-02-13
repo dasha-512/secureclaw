@@ -54,6 +54,76 @@ else
 fi
 chmod +x "$DEST/scripts/"*.sh
 
+# Also install to workspace if it exists (agent discovery)
+WORKSPACE_SKILLS="$OPENCLAW_DIR/workspace/skills/secureclaw"
+if [ -d "$OPENCLAW_DIR/workspace" ]; then
+  if [ "$(cd "$SCRIPT_DIR" && pwd -P)" = "$(cd "$WORKSPACE_SKILLS" 2>/dev/null && pwd -P)" ] 2>/dev/null; then
+    echo "ℹ️  Workspace source and destination are the same — skipping"
+  else
+    # Remove old secureclaw-advisor if it exists
+    if [ -d "$OPENCLAW_DIR/workspace/skills/secureclaw-advisor" ]; then
+      rm -rf "$OPENCLAW_DIR/workspace/skills/secureclaw-advisor"
+      echo "🗑  Removed old secureclaw-advisor from workspace"
+    fi
+    mkdir -p "$WORKSPACE_SKILLS"
+    cp -r "$SCRIPT_DIR"/* "$WORKSPACE_SKILLS/"
+    chmod +x "$WORKSPACE_SKILLS/scripts/"*.sh
+    echo "📂 Installed to workspace: $WORKSPACE_SKILLS"
+  fi
+
+  # Register in TOOLS.md if not already present
+  TOOLS_FILE="$OPENCLAW_DIR/workspace/TOOLS.md"
+  if [ -f "$TOOLS_FILE" ] && ! grep -q "## SecureClaw Security Skill" "$TOOLS_FILE" 2>/dev/null; then
+    cat >> "$TOOLS_FILE" << 'TOOLS_EOF'
+
+---
+
+## SecureClaw Security Skill (v2.0.0)
+
+Security hardening skill by Adversa AI. 12 core rules, 9 scripts, 4 pattern databases.
+
+### Rules
+
+Read and follow all 12 rules in `skills/secureclaw/SKILL.md` at all times.
+
+### Scripts
+
+All scripts are in `skills/secureclaw/scripts/`. Run with bash:
+
+```
+bash skills/secureclaw/scripts/quick-audit.sh          # Security audit (OWASP ASI mapped)
+bash skills/secureclaw/scripts/quick-harden.sh         # Apply auto-fixes
+bash skills/secureclaw/scripts/check-integrity.sh      # Verify cognitive file baselines
+bash skills/secureclaw/scripts/check-privacy.sh        # Detect PII before posting
+bash skills/secureclaw/scripts/scan-skills.sh          # Supply chain scan
+bash skills/secureclaw/scripts/check-advisories.sh     # Vulnerability advisories
+bash skills/secureclaw/scripts/emergency-response.sh   # Incident response
+```
+TOOLS_EOF
+    echo "📝 Registered in TOOLS.md"
+  fi
+
+  # Register in AGENTS.md if not already present
+  AGENTS_FILE="$OPENCLAW_DIR/workspace/AGENTS.md"
+  if [ -f "$AGENTS_FILE" ] && ! grep -q "SecureClaw Security Skill" "$AGENTS_FILE" 2>/dev/null; then
+    cat >> "$AGENTS_FILE" << 'AGENTS_EOF'
+
+### SecureClaw Security Skill (v2.0.0) - ALWAYS ACTIVE
+
+Your workspace has the SecureClaw security skill installed. Follow the 12 core security rules in `skills/secureclaw/SKILL.md` at all times.
+
+SecureClaw protects against: prompt injection, credential exposure, supply chain threats, memory tampering, cost overruns, file integrity violations, and inter-agent attacks.
+
+**Run audits:** `bash skills/secureclaw/scripts/quick-audit.sh`
+
+**Apply hardening:** `bash skills/secureclaw/scripts/quick-harden.sh`
+
+See `TOOLS.md` for complete SecureClaw reference and available scripts.
+AGENTS_EOF
+    echo "📝 Registered in AGENTS.md"
+  fi
+fi
+
 echo ""
 echo "✅ SecureClaw v$NEW_VER installed to $DEST"
 echo ""
