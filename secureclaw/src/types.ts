@@ -111,6 +111,21 @@ export interface ChannelConfig {
   allowlist?: string[];
 }
 
+/** Failure mode for graceful degradation (G4) */
+export type FailureMode = 'block_all' | 'safe_mode' | 'read_only';
+
+/** Risk profile names for per-workload security (G8) */
+export type RiskProfile = 'strict' | 'standard' | 'permissive';
+
+/** Behavioral baseline entry (G3) */
+export interface BehavioralBaseline {
+  toolCallFrequency: Record<string, number>;
+  typicalTools: string[];
+  typicalDataPaths: string[];
+  windowMinutes: number;
+  lastUpdated: string;
+}
+
 /** SecureClaw-specific configuration */
 export interface SecureClawConfig {
   monitors?: {
@@ -129,6 +144,7 @@ export interface SecureClawConfig {
     integrityChecks?: boolean;
     promptInjectionScan?: boolean;
     quarantineEnabled?: boolean;
+    trustLevels?: boolean;
   };
   skills?: {
     blockUnaudited?: boolean;
@@ -138,6 +154,20 @@ export interface SecureClawConfig {
   network?: {
     egressAllowlistEnabled?: boolean;
     egressAllowlist?: string[];
+  };
+  failureMode?: FailureMode;
+  riskProfile?: RiskProfile;
+  riskProfiles?: Record<string, {
+    failureMode?: FailureMode;
+    approvalRequired?: boolean;
+    allowedTools?: string[];
+    blockedTools?: string[];
+    maxCostPerSession?: number;
+  }>;
+  behavioral?: {
+    baselineEnabled?: boolean;
+    deviationThreshold?: number;
+    windowMinutes?: number;
   };
 }
 

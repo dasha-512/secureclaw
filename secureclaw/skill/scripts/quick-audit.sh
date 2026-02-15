@@ -1,6 +1,6 @@
 #!/bin/bash
-# SecureClaw — Security Audit v2.0 (OWASP ASI + Security 101)
-# Covers: All 10 ASI categories + all 8 Security 101 threat classes
+# SecureClaw — Security Audit v2.1 (5-Framework Aligned)
+# Covers: OWASP ASI + Security 101 + MITRE ATLAS + CoSAI + CSA Singapore
 # Developed by Adversa AI — Agentic AI Security and Red Teaming Pioneers
 # https://adversa.ai
 set -euo pipefail
@@ -151,6 +151,56 @@ if command -v openclaw >/dev/null 2>&1 && openclaw secureclaw audit --help >/dev
   chk M "ASI10" "SecureClaw plugin (kill switch)" PASS
 else
   chk M "ASI10" "SecureClaw plugin (kill switch)" FAIL "Not installed — no runtime enforcement or kill switch"
+fi
+
+# ── Kill Switch Active (G2 — CSA, CoSAI) ──
+if [ -f "$OPENCLAW_DIR/.secureclaw/killswitch" ]; then
+  echo ""
+  echo "🔴 KILL SWITCH ACTIVE — all agent operations should be suspended"
+  echo "   Remove: rm $OPENCLAW_DIR/.secureclaw/killswitch"
+  echo ""
+fi
+
+# ── Memory Trust / Injection Detection (G1 — MITRE ATLAS, CoSAI) ──
+STATE_DIR="$OPENCLAW_DIR"
+for mf in SOUL.md IDENTITY.md TOOLS.md AGENTS.md; do
+  if [ -f "$STATE_DIR/$mf" ]; then
+    if grep -qiE "(ignore previous|new instructions|system prompt override|you are now|disregard|forget your rules)" "$STATE_DIR/$mf" 2>/dev/null; then
+      chk C "ATLAS" "$mf memory trust" FAIL "Possible injected instructions detected — review immediately"
+    else
+      chk M "ATLAS" "$mf memory trust" PASS
+    fi
+  fi
+done
+
+# Also scan agent-level memory files
+if [ -d "$OPENCLAW_DIR/agents" ]; then
+  for AGENT_DIR in "$OPENCLAW_DIR/agents"/*/; do
+    [ -d "$AGENT_DIR" ] || continue
+    AGENT_NAME=$(basename "$AGENT_DIR")
+    for mf in soul.md SOUL.md MEMORY.md; do
+      MF_PATH="$AGENT_DIR/$mf"
+      if [ -f "$MF_PATH" ]; then
+        if grep -qiE "(ignore previous|new instructions|system prompt override|you are now|disregard|forget your rules)" "$MF_PATH" 2>/dev/null; then
+          chk C "ATLAS" "$AGENT_NAME/$mf memory trust" FAIL "Possible injected instructions — AML.CS0051"
+        fi
+      fi
+    done
+  done
+fi
+
+# ── Control Token Customization (G7 — MITRE AML.CS0051) ──
+if [ -f "$CONFIG" ]; then
+  grep -q '"controlTokens"' "$CONFIG" 2>/dev/null \
+    && chk M "ATLAS" "Control token customization" PASS \
+    || chk M "ATLAS" "Control token customization" FAIL "Default control tokens — vulnerable to AML.CS0051 spoofing"
+fi
+
+# ── Graceful Degradation Mode (G4 — CoSAI, CSA) ──
+if [ -f "$CONFIG" ]; then
+  grep -q '"failureMode"' "$CONFIG" 2>/dev/null \
+    && chk M "CoSAI" "Failure mode configured" PASS \
+    || chk M "CoSAI" "Failure mode configured" FAIL "No failureMode set — no graceful degradation"
 fi
 
 # ── Summary ──

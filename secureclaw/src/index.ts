@@ -17,12 +17,141 @@ import type {
   GatewayHandle,
   SecureClawPlugin,
   OpenClawConfig,
+  FailureMode,
+  RiskProfile,
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
+
+// ============================================================
+// Kill Switch (G2 — CSA, CoSAI)
+// ============================================================
+
+/**
+ * Check if the kill switch is active.
+ */
+export async function isKillSwitchActive(stateDir: string): Promise<boolean> {
+  const killPath = path.join(stateDir, '.secureclaw', 'killswitch');
+  try {
+    await fs.access(killPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Activate the kill switch — blocks all tool calls.
+ */
+export async function activateKillSwitch(stateDir: string, reason?: string): Promise<void> {
+  const scDir = path.join(stateDir, '.secureclaw');
+  await fs.mkdir(scDir, { recursive: true });
+  const content = JSON.stringify({
+    activated: new Date().toISOString(),
+    reason: reason ?? 'Manual activation',
+    activatedBy: 'secureclaw-cli',
+  }, null, 2);
+  await fs.writeFile(path.join(scDir, 'killswitch'), content, 'utf-8');
+}
+
+/**
+ * Deactivate the kill switch — resumes normal operation.
+ */
+export async function deactivateKillSwitch(stateDir: string): Promise<void> {
+  const killPath = path.join(stateDir, '.secureclaw', 'killswitch');
+  try {
+    await fs.unlink(killPath);
+  } catch {
+    // Already inactive
+  }
+}
+
+// ============================================================
+// Behavioral Baseline (G3 — CoSAI)
+// ============================================================
+
+/**
+ * Log a tool call for behavioral baseline tracking.
+ */
+export async function logToolCall(
+  stateDir: string,
+  toolName: string,
+  dataPath?: string,
+): Promise<void> {
+  const logDir = path.join(stateDir, '.secureclaw', 'behavioral');
+  await fs.mkdir(logDir, { recursive: true });
+  const entry = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    tool: toolName,
+    dataPath: dataPath ?? '',
+  }) + '\n';
+  await fs.appendFile(path.join(logDir, 'tool-calls.jsonl'), entry, 'utf-8');
+}
+
+/**
+ * Get behavioral baseline statistics.
+ */
+export async function getBehavioralBaseline(
+  stateDir: string,
+  windowMinutes = 60,
+): Promise<{ toolFrequency: Record<string, number>; totalCalls: number; uniqueTools: number }> {
+  const logPath = path.join(stateDir, '.secureclaw', 'behavioral', 'tool-calls.jsonl');
+  let content: string;
+  try {
+    content = await fs.readFile(logPath, 'utf-8');
+  } catch {
+    return { toolFrequency: {}, totalCalls: 0, uniqueTools: 0 };
+  }
+
+  const cutoff = new Date(Date.now() - windowMinutes * 60 * 1000);
+  const frequency: Record<string, number> = {};
+  let total = 0;
+
+  for (const line of content.split('\n').filter(Boolean)) {
+    try {
+      const entry = JSON.parse(line);
+      if (new Date(entry.timestamp) >= cutoff) {
+        frequency[entry.tool] = (frequency[entry.tool] ?? 0) + 1;
+        total++;
+      }
+    } catch {
+      // Skip malformed lines
+    }
+  }
+
+  return {
+    toolFrequency: frequency,
+    totalCalls: total,
+    uniqueTools: Object.keys(frequency).length,
+  };
+}
+
+// ============================================================
+// Failure Modes (G4 — CoSAI, CSA)
+// ============================================================
+
+const FAILURE_MODE_DESCRIPTIONS: Record<FailureMode, string> = {
+  block_all: 'Block ALL tool calls — full lockdown',
+  safe_mode: 'Allow read operations only, block all writes',
+  read_only: 'Allow ls/cat/git status, block everything else',
+};
+
+/**
+ * Get the current failure mode.
+ */
+export function getFailureMode(config: OpenClawConfig): FailureMode {
+  return config.secureclaw?.failureMode ?? 'block_all';
+}
+
+/**
+ * Get the active risk profile.
+ */
+export function getRiskProfile(config: OpenClawConfig): RiskProfile {
+  return config.secureclaw?.riskProfile ?? 'standard';
+}
 
 /**
  * Create a real AuditContext from a state directory and config.
@@ -185,6 +314,13 @@ const secureClawPlugin = {
     api.on('gateway_start', async () => {
       try {
         const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+
+        // Check kill switch (G2)
+        if (await isKillSwitchActive(stateDir)) {
+          api.logger.warn('[SecureClaw] 🔴 KILL SWITCH ACTIVE — all operations suspended');
+          return;
+        }
+
         const ctx = await createAuditContext(stateDir, api.config);
         const report = await runAudit({ context: ctx });
         api.logger.info(`[SecureClaw] Security score: ${report.score}/100`);
@@ -299,6 +435,52 @@ const secureClawPlugin = {
           console.log(`Recent Alerts: ${status.alerts.length}`);
           for (const alert of status.alerts.slice(-5)) {
             console.log(`  [${alert.severity}] ${alert.message}`);
+          }
+        });
+
+      // ── Kill Switch (G2) ──
+      sc.command('kill')
+        .description('Activate the kill switch — suspend all agent operations')
+        .option('--reason <reason>', 'Reason for activating kill switch')
+        .action(async (...args: unknown[]) => {
+          const opts = (args[0] ?? {}) as Record<string, string>;
+          const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+          await activateKillSwitch(stateDir, opts['reason']);
+          console.log('🔴 KILL SWITCH ACTIVATED — all agent operations suspended');
+          console.log(`   Reason: ${opts['reason'] ?? 'Manual activation'}`);
+          console.log('   To resume: npx openclaw secureclaw resume');
+        });
+
+      sc.command('resume')
+        .description('Deactivate the kill switch — resume agent operations')
+        .action(async () => {
+          const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+          const wasActive = await isKillSwitchActive(stateDir);
+          if (!wasActive) {
+            console.log('Kill switch is not active. Nothing to resume.');
+            return;
+          }
+          await deactivateKillSwitch(stateDir);
+          console.log('✅ Kill switch deactivated — agent operations resumed');
+        });
+
+      // ── Behavioral Baseline (G3) ──
+      sc.command('baseline')
+        .description('Show behavioral baseline statistics')
+        .option('--window <minutes>', 'Time window in minutes (default: 60)')
+        .action(async (...args: unknown[]) => {
+          const opts = (args[0] ?? {}) as Record<string, string>;
+          const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+          const window = parseInt(opts['window'] ?? '60', 10);
+          const baseline = await getBehavioralBaseline(stateDir, window);
+          console.log(`Behavioral Baseline (last ${window} minutes):`);
+          console.log(`  Total tool calls: ${baseline.totalCalls}`);
+          console.log(`  Unique tools: ${baseline.uniqueTools}`);
+          if (baseline.totalCalls > 0) {
+            console.log('  Tool frequency:');
+            for (const [tool, count] of Object.entries(baseline.toolFrequency).sort((a, b) => b[1] - a[1])) {
+              console.log(`    ${tool}: ${count}`);
+            }
           }
         });
 
@@ -439,6 +621,26 @@ export const legacyPlugin: SecureClawPlugin = {
       const status = costMonitor.status();
       console.log(`Cost Monitor: ${status.running ? 'running' : 'stopped'}`);
     },
+    'secureclaw kill': async (...args: string[]) => {
+      const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+      const reason = args.find((a) => !a.startsWith('--')) ?? 'Manual activation';
+      await activateKillSwitch(stateDir, reason);
+      console.log('🔴 KILL SWITCH ACTIVATED — all agent operations suspended');
+    },
+    'secureclaw resume': async () => {
+      const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+      await deactivateKillSwitch(stateDir);
+      console.log('✅ Kill switch deactivated — agent operations resumed');
+    },
+    'secureclaw baseline': async (...args: string[]) => {
+      const stateDir = process.env['OPENCLAW_STATE_DIR'] ?? path.join(os.homedir(), '.openclaw');
+      const windowArg = args.find((a) => !a.startsWith('--'));
+      const window = windowArg ? parseInt(windowArg, 10) : 60;
+      const baseline = await getBehavioralBaseline(stateDir, window);
+      console.log(`Behavioral Baseline (last ${window} minutes):`);
+      console.log(`  Total tool calls: ${baseline.totalCalls}`);
+      console.log(`  Unique tools: ${baseline.uniqueTools}`);
+    },
     'secureclaw skill install': async () => {
       const installScript = path.join(__dirname, '..', 'skill', 'scripts', 'install.sh');
       try {
@@ -478,7 +680,7 @@ export const legacyPlugin: SecureClawPlugin = {
       }
     },
   },
-  tools: ['security_audit', 'security_status', 'skill_scan', 'cost_report'],
+  tools: ['security_audit', 'security_status', 'skill_scan', 'cost_report', 'kill_switch', 'behavioral_baseline'],
 };
 
 // Also export individual components for programmatic use

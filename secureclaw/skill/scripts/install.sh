@@ -78,13 +78,13 @@ if [ -d "$OPENCLAW_DIR/workspace" ]; then
 
 ---
 
-## SecureClaw Security Skill (v2.0.0)
+## SecureClaw Security Skill (v2.1.0)
 
-Security hardening skill by Adversa AI. 12 core rules, 9 scripts, 4 pattern databases.
+Security hardening skill by Adversa AI. 15 core rules, 9 scripts, 4 pattern databases.
 
 ### Rules
 
-Read and follow all 12 rules in `skills/secureclaw/SKILL.md` at all times.
+Read and follow all 15 rules in `skills/secureclaw/SKILL.md` at all times.
 
 ### Scripts
 
@@ -108,9 +108,9 @@ TOOLS_EOF
   if [ -f "$AGENTS_FILE" ] && ! grep -q "SecureClaw Security Skill" "$AGENTS_FILE" 2>/dev/null; then
     cat >> "$AGENTS_FILE" << 'AGENTS_EOF'
 
-### SecureClaw Security Skill (v2.0.0) - ALWAYS ACTIVE
+### SecureClaw Security Skill (v2.1.0) - ALWAYS ACTIVE
 
-Your workspace has the SecureClaw security skill installed. Follow the 12 core security rules in `skills/secureclaw/SKILL.md` at all times.
+Your workspace has the SecureClaw security skill installed. Follow the 15 core security rules in `skills/secureclaw/SKILL.md` at all times.
 
 SecureClaw protects against: prompt injection, credential exposure, supply chain threats, memory tampering, cost overruns, file integrity violations, and inter-agent attacks.
 

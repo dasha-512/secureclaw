@@ -748,11 +748,13 @@ describe('auditor', () => {
           sandbox: { mode: 'all' },
           tools: { exec: { host: 'sandbox' } },
           session: { dmScope: 'per-channel-peer' },
+          secureclaw: { failureMode: 'block_all' },
         },
       });
       const internals = getCtxInternals(ctx);
       internals._permissions['/tmp/mock-openclaw'] = 0o700;
       internals._files['/tmp/mock-openclaw/.env'] = 'SPENDING_LIMIT=100';
+      internals._files['/tmp/mock-openclaw/openclaw.json'] = JSON.stringify({ controlTokens: { custom: true } });
       // empty agents dir so no memory findings
       internals._dirs['/tmp/mock-openclaw/agents'] = [];
 

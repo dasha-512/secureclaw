@@ -1398,6 +1398,89 @@ export async function auditIOC(ctx: AuditContext): Promise<AuditFinding[]> {
 }
 
 // ============================================================
+// 2i. Kill Switch, Memory Trust & Control Token Checks (G1, G2, G7)
+// ============================================================
+export async function auditMultiFramework(ctx: AuditContext): Promise<AuditFinding[]> {
+  const findings: AuditFinding[] = [];
+
+  // KILL-001: Kill switch status
+  const killswitchPath = path.join(ctx.stateDir, '.secureclaw', 'killswitch');
+  const killActive = await ctx.fileExists(killswitchPath);
+  if (killActive) {
+    findings.push({
+      id: 'SC-KILL-001',
+      severity: 'INFO',
+      category: 'kill-switch',
+      title: 'Kill switch is active',
+      description: 'The SecureClaw kill switch is currently active. All agent operations should be suspended.',
+      evidence: `Kill switch file: ${killswitchPath}`,
+      remediation: 'Run "npx openclaw secureclaw resume" to deactivate',
+      autoFixable: false,
+      references: [],
+      owaspAsi: 'ASI10',
+    });
+  }
+
+  // TRUST-001: Memory trust — scan workspace cognitive files for injection
+  const cognitiveFiles = ['SOUL.md', 'IDENTITY.md', 'TOOLS.md', 'AGENTS.md', 'SECURITY.md'];
+  for (const cogFile of cognitiveFiles) {
+    const content = await ctx.readFile(path.join(ctx.stateDir, cogFile));
+    if (!content) continue;
+    for (const pattern of PROMPT_INJECTION_PATTERNS) {
+      if (pattern.test(content)) {
+        findings.push({
+          id: 'SC-TRUST-001',
+          severity: 'CRITICAL',
+          category: 'memory-trust',
+          title: `Injected instructions in ${cogFile}`,
+          description: `Workspace cognitive file contains prompt injection pattern: "${pattern.source}". This may indicate context poisoning (MITRE ATLAS AML.CS0051).`,
+          evidence: `File: ${cogFile}, Pattern: ${pattern.source}`,
+          remediation: 'Review and clean this file. Run emergency-response.sh if compromise suspected.',
+          autoFixable: false,
+          references: ['AML.CS0051'],
+          owaspAsi: 'ASI06',
+        });
+      }
+    }
+  }
+
+  // CTRL-001: Control token customization (G7)
+  const configContent = await ctx.readFile(path.join(ctx.stateDir, 'openclaw.json'));
+  if (configContent && !configContent.includes('"controlTokens"')) {
+    findings.push({
+      id: 'SC-CTRL-001',
+      severity: 'MEDIUM',
+      category: 'control-tokens',
+      title: 'Default control tokens in use',
+      description: 'Control tokens have not been customized. Attackers can spoof model control tokens (MITRE AML.CS0051).',
+      evidence: 'No "controlTokens" key in openclaw.json',
+      remediation: 'Customize controlTokens in openclaw.json to non-default values',
+      autoFixable: false,
+      references: ['AML.CS0051'],
+      owaspAsi: 'ASI01',
+    });
+  }
+
+  // DEGRAD-001: Graceful degradation mode (G4)
+  if (!ctx.config.secureclaw?.failureMode) {
+    findings.push({
+      id: 'SC-DEGRAD-001',
+      severity: 'LOW',
+      category: 'degradation',
+      title: 'No graceful degradation mode configured',
+      description: 'No failureMode is set. When issues are detected, the system has no predefined degradation strategy.',
+      evidence: 'secureclaw.failureMode is not set',
+      remediation: 'Set secureclaw.failureMode to "block_all", "safe_mode", or "read_only"',
+      autoFixable: false,
+      references: [],
+      owaspAsi: 'ASI08',
+    });
+  }
+
+  return findings;
+}
+
+// ============================================================
 // Main audit runner
 // ============================================================
 export async function runAudit(options: AuditOptions = {}): Promise<AuditReport> {
@@ -1418,6 +1501,7 @@ export async function runAudit(options: AuditOptions = {}): Promise<AuditReport>
     memoryFindings,
     costFindings,
     iocFindings,
+    multiFrameworkFindings,
   ] = await Promise.all([
     auditGateway(ctx, deep),
     auditCredentials(ctx),
@@ -1427,6 +1511,7 @@ export async function runAudit(options: AuditOptions = {}): Promise<AuditReport>
     auditMemoryIntegrity(ctx),
     auditCostExposure(ctx),
     auditIOC(ctx),
+    auditMultiFramework(ctx),
   ]);
 
   const allFindings = [
@@ -1438,6 +1523,7 @@ export async function runAudit(options: AuditOptions = {}): Promise<AuditReport>
     ...memoryFindings,
     ...costFindings,
     ...iocFindings,
+    ...multiFrameworkFindings,
   ];
 
   const score = calculateScore(allFindings);
@@ -1446,7 +1532,7 @@ export async function runAudit(options: AuditOptions = {}): Promise<AuditReport>
   return {
     timestamp: new Date().toISOString(),
     openclawVersion: ctx.openclawVersion,
-    secureclawVersion: '2.0.0',
+    secureclawVersion: '2.1.0',
     platform: ctx.platform,
     deploymentMode: ctx.deploymentMode,
     score,
