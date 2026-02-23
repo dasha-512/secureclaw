@@ -12,7 +12,7 @@ Seven-framework coverage. Every audit check tagged with MAESTRO layer and NIST a
 ### Audit Finding Schema Changes
 
 - `AuditFinding` type gains two optional fields: `maestroLayer` (L1-L7) and `nistCategory` (evasion/poisoning/privacy/misuse).
-- All 55 existing audit checks tagged with appropriate MAESTRO layer and NIST attack type.
+- All 56 audit checks tagged with appropriate MAESTRO layer and NIST attack type.
 - New `MaestroLayer` and `NistAttackType` type aliases exported from types.ts.
 
 ### New Audit Check

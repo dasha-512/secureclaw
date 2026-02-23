@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/secureclaw",
+  "name": "@adversa/secureclaw",
   "version": "2.2.0",
   "description": "Automated security hardening plugin for OpenClaw",
   "main": "dist/index.js",

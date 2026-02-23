@@ -4,7 +4,9 @@ Automated security hardening for [OpenClaw](https://openclaw.ai) AI agents.
 
 Developed by [Adversa AI](https://adversa.ai) -- Agentic AI Security and Red Teaming Pioneers.
 
-51 audit checks. 15 behavioral rules. 9 scripts. 4 pattern databases. 7 security frameworks mapped.
+56 audit checks. 15 behavioral rules. 9 scripts. 4 pattern databases. 7 security frameworks mapped.
+
+[![npm](https://img.shields.io/npm/v/@adversa/secureclaw)](https://www.npmjs.com/package/@adversa/secureclaw)
 
 10/10 OWASP ASI | 10/14 MITRE ATLAS | 4/4 MITRE OpenClaw Cases | 3/3 CoSAI Principles | CSA Singapore | 6/7 CSA MAESTRO Layers | 4/4 NIST AI 100-2 GenAI Types
 
@@ -45,7 +47,7 @@ flowchart LR
 6. [Automated Hardening](#6-automated-hardening)
 7. [Scripts Reference](#7-scripts-reference)
 8. [Pattern Databases](#8-pattern-databases)
-9. [The 15 Agent Rules](#9-the-12-agent-rules)
+9. [The 15 Agent Rules](#9-the-15-agent-rules)
 10. [OWASP ASI Coverage Map](#10-owasp-asi-coverage-map)
 11. [Plugin CLI Reference](#11-plugin-cli-reference)
 12. [Configuration](#12-configuration)
@@ -140,9 +142,16 @@ bash secureclaw/secureclaw/skill/scripts/install.sh
 
 This installs the 15 behavioral rules, 9 scripts, and 4 pattern databases to your agent's skills directory. If a workspace directory exists (`~/.openclaw/workspace/`), the installer also copies the skill there and registers it in `AGENTS.md` and `TOOLS.md` for automatic agent discovery.
 
-### Option B: Plugin from source
+### Option B: Plugin from npm
 
-For the full TypeScript plugin with 51 audit checks, background monitors, and CLI integration:
+For the full TypeScript plugin with 56 audit checks, background monitors, and CLI integration:
+
+```sh
+npm install @adversa/secureclaw
+npx openclaw plugins install -l node_modules/@adversa/secureclaw
+```
+
+### Option C: Plugin from source
 
 ```sh
 git clone https://github.com/adversa-ai/secureclaw.git
@@ -869,7 +878,7 @@ No. All audits, hardening, integrity checks, privacy checks, and supply chain sc
 
 **Can I use the skill without the plugin?**
 
-Yes. The skill (bash scripts + JSON configs + SKILL.md) is fully standalone. The plugin adds 51 audit checks, background monitoring, CLI integration, and a scoring system, but everything in the `skill/` directory works independently.
+Yes. The skill (bash scripts + JSON configs + SKILL.md) is fully standalone. The plugin adds 56 audit checks, background monitoring, CLI integration, and a scoring system, but everything in the `skill/` directory works independently.
 
 **Can I use the plugin without the skill?**
 
