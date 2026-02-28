@@ -166,7 +166,7 @@ The plugin includes the skill. After installing, run `npx openclaw secureclaw sk
 
 ### Option D: ClawHub
 
-Install the skill directly from [ClawHub](https://clawhub.io):
+Install the skill directly from [ClawHub](https://clawhub.ai/):
 
 1. Search for **SecureClaw** on ClawHub
 2. Click Install
