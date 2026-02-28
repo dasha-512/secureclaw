@@ -1,8 +1,8 @@
 # SecureClaw
 
-End-to-End security paltform for [OpenClaw](https://openclaw.ai) AI agents.
+End-to-End security platform for [OpenClaw](https://openclaw.ai) AI agents.
 
-Audit, Hardening and Runtine Security for Openclaw.
+Audit, Hardening and Runtime Security for OpenClaw.
 
 Developed by [Adversa AI](https://adversa.ai) -- Agentic AI Security and Red Teaming Pioneers.
 
@@ -10,11 +10,11 @@ Developed by [Adversa AI](https://adversa.ai) -- Agentic AI Security and Red Tea
 
 10/10 OWASP ASI | 10/14 MITRE ATLAS | 4/4 MITRE OpenClaw Cases | 3/3 CoSAI Principles | CSA Singapore | 6/7 CSA MAESTRO Layers | 4/4 NIST AI 100-2 GenAI Types
 
-SecureClaw is a 360-degree security plugin and skills tahat audits your OpenClaw installation for misconfigurations and known vulnerabilities, applies automated hardening fixes, and gives your agent behavioral security rules that protect against prompt injection, credential theft, supply chain attacks, and privacy leaks.
+SecureClaw is a 360-degree security plugin and skills that audits your OpenClaw installation for misconfigurations and known vulnerabilities, applies automated hardening fixes, and gives your agent behavioral security rules that protect against prompt injection, credential theft, supply chain attacks, and privacy leaks.
 
-1️⃣ Full OWASP Agentic Security Top 10 coverage. Static and runtime. We're the first and only OpenClaw security tool  to formally map every control to the ASI framework. 10/10 categories. 
+1️⃣ Full OWASP Agentic Security Top 10 coverage. Static and runtime. We're the first and only security tool for OpenClaw to formally map every control to the ASI framework. 10/10 categories. 
 
-2️⃣ Every known incident. Every known CVE up untill now. All 8 documented threat classes from the OpenClaw Security 101 research have specific countermeasures. Not generic "be careful" advice — actual detection and hardening for each one.
+2️⃣ Every known incident. Every known CVE up until now. All 8 documented threat classes from the OpenClaw Security 101 research have specific countermeasures. Not generic "be careful" advice — actual detection and hardening for each one.
 
 3️⃣ Plugin + Skill layered defense. The plugin runs as code — gateway hardening, permission lockdown, credential scanning. The skill runs as LLM directives — injection awareness, PII scanning, integrity monitoring. Two layers. Each catches the failures of the other.
 
@@ -23,7 +23,7 @@ SecureClaw is a 360-degree security plugin and skills tahat audits your OpenClaw
 ```mermaid
 graph TB
     subgraph SecureClaw["SecureClaw Defense Layers"]
-        L1["Layer 1: Audit<br/>51 checks · 8 categories<br/>OWASP ASI mapped"]
+        L1["Layer 1: Audit<br/>56 checks · 8 categories<br/>OWASP ASI mapped"]
         L2["Layer 2: Hardening<br/>5 modules · auto-fix<br/>backup + rollback"]
         L3["Layer 3: Behavioral Rules<br/>15 LLM directives · ~1,230 tokens<br/>runtime protection"]
     end
@@ -36,7 +36,7 @@ graph TB
 
 ```mermaid
 flowchart LR
-    Install["Install"] --> Audit["Audit<br/>51 checks"]
+    Install["Install"] --> Audit["Audit<br/>56 checks"]
     Audit --> Report["Report<br/>findings"]
     Report --> Harden["Harden<br/>auto-fix"]
     Harden --> Monitor["Monitor<br/>runtime"]
@@ -75,7 +75,7 @@ AI agents with access to your files, credentials, email, and the internet are a 
 
 SecureClaw addresses this by operating on three layers:
 
-**Layer 1 -- Audit.** 51 automated checks across 8 categories scan your OpenClaw installation for known misconfigurations: exposed gateway ports, weak file permissions, missing authentication, plaintext credentials outside `.env`, disabled sandboxing, and more.
+**Layer 1 -- Audit.** 56 automated checks across 8 categories scan your OpenClaw installation for known misconfigurations: exposed gateway ports, weak file permissions, missing authentication, plaintext credentials outside `.env`, disabled sandboxing, and more.
 
 **Layer 2 -- Hardening.** Automated fixes for the most critical findings: binding the gateway to localhost, locking down file permissions, adding privacy and injection-awareness directives to your agent's core identity file, and creating cryptographic baselines for tamper detection.
 
@@ -107,7 +107,7 @@ The skill is designed to be lightweight. All detection logic runs as external ba
 secureclaw/
   src/                          TypeScript plugin source
     index.ts                    Plugin entry point, CLI commands
-    auditor.ts                  51-check audit engine
+    auditor.ts                  56-check audit engine
     hardener.ts                 Backup/rollback hardening
     types.ts                    All TypeScript interfaces
     hardening/                  5 hardening modules
@@ -172,7 +172,7 @@ npx openclaw plugins install -l .
 
 The plugin includes the skill. After installing, run `npx openclaw secureclaw skill install` to deploy the skill files to your agent's workspace.
 
-### Option C: ClawHub
+### Option D: ClawHub
 
 Install the skill directly from [ClawHub](https://clawhub.io):
 
@@ -283,7 +283,7 @@ The final summary shows a score from 0 to 100 calculated as: `(passed / total) *
 | 0 | No critical issues |
 | 2 | One or more critical issues found |
 
-### Plugin Audit (51 checks)
+### Plugin Audit (56 checks)
 
 The full TypeScript plugin audit covers everything the skill audit does, plus:
 
@@ -664,7 +664,7 @@ SecureClaw maps to all 10 categories of the [OWASP Agentic Security Initiative](
 
 ## 11. Multi-Framework Coverage
 
-SecureClaw is the first OpenClaw security tool to formally map controls to seven agentic security frameworks.
+SecureClaw is the first security tool for OpenClaw to formally map controls to seven agentic security frameworks.
 
 | Framework | Coverage | Notes |
 |-----------|----------|-------|
@@ -706,7 +706,7 @@ When the full plugin is installed, these commands are available:
 
 ### npx openclaw secureclaw audit
 
-Run the 51-check security audit.
+Run the 56-check security audit.
 
 | Flag | Effect |
 |------|--------|

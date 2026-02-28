@@ -15,7 +15,7 @@ SecureClaw audits your OpenClaw installation for misconfigurations and known vul
 ```mermaid
 graph TB
     subgraph SecureClaw["SecureClaw Defense Layers"]
-        L1["Layer 1: Audit<br/>51 checks · 8 categories<br/>OWASP ASI mapped"]
+        L1["Layer 1: Audit<br/>56 checks · 8 categories<br/>OWASP ASI mapped"]
         L2["Layer 2: Hardening<br/>5 modules · auto-fix<br/>backup + rollback"]
         L3["Layer 3: Behavioral Rules<br/>15 LLM directives · ~1,230 tokens<br/>runtime protection"]
     end
@@ -28,7 +28,7 @@ graph TB
 
 ```mermaid
 flowchart LR
-    Install["Install"] --> Audit["Audit<br/>51 checks"]
+    Install["Install"] --> Audit["Audit<br/>56 checks"]
     Audit --> Report["Report<br/>findings"]
     Report --> Harden["Harden<br/>auto-fix"]
     Harden --> Monitor["Monitor<br/>runtime"]
@@ -49,14 +49,15 @@ flowchart LR
 8. [Pattern Databases](#8-pattern-databases)
 9. [The 15 Agent Rules](#9-the-15-agent-rules)
 10. [OWASP ASI Coverage Map](#10-owasp-asi-coverage-map)
-11. [Plugin CLI Reference](#11-plugin-cli-reference)
-12. [Configuration](#12-configuration)
-13. [Background Monitors](#13-background-monitors)
-14. [Incident Response](#14-incident-response)
-15. [Uninstalling](#15-uninstalling)
-16. [Frequently Asked Questions](#16-frequently-asked-questions)
-17. [Threat Model](#17-threat-model)
-18. [Development](#18-development)
+11. [Multi-Framework Coverage](#11-multi-framework-coverage)
+12. [Plugin CLI Reference](#12-plugin-cli-reference)
+13. [Configuration](#13-configuration)
+14. [Background Monitors](#14-background-monitors)
+15. [Incident Response](#15-incident-response)
+16. [Uninstalling](#16-uninstalling)
+17. [Frequently Asked Questions](#17-frequently-asked-questions)
+18. [Threat Model](#18-threat-model)
+19. [Development](#19-development)
 
 ---
 
@@ -66,7 +67,7 @@ AI agents with access to your files, credentials, email, and the internet are a 
 
 SecureClaw addresses this by operating on three layers:
 
-**Layer 1 -- Audit.** 51 automated checks across 8 categories scan your OpenClaw installation for known misconfigurations: exposed gateway ports, weak file permissions, missing authentication, plaintext credentials outside `.env`, disabled sandboxing, and more.
+**Layer 1 -- Audit.** 56 automated checks across 8 categories scan your OpenClaw installation for known misconfigurations: exposed gateway ports, weak file permissions, missing authentication, plaintext credentials outside `.env`, disabled sandboxing, and more.
 
 **Layer 2 -- Hardening.** Automated fixes for the most critical findings: binding the gateway to localhost, locking down file permissions, adding privacy and injection-awareness directives to your agent's core identity file, and creating cryptographic baselines for tamper detection.
 
@@ -98,7 +99,7 @@ The skill is designed to be lightweight. All detection logic runs as external ba
 secureclaw/
   src/                          TypeScript plugin source
     index.ts                    Plugin entry point, CLI commands
-    auditor.ts                  51-check audit engine
+    auditor.ts                  56-check audit engine
     hardener.ts                 Backup/rollback hardening
     types.ts                    All TypeScript interfaces
     hardening/                  5 hardening modules
@@ -163,7 +164,7 @@ npx openclaw plugins install -l .
 
 The plugin includes the skill. After installing, run `npx openclaw secureclaw skill install` to deploy the skill files to your agent's workspace.
 
-### Option C: ClawHub
+### Option D: ClawHub
 
 Install the skill directly from [ClawHub](https://clawhub.io):
 
@@ -274,7 +275,7 @@ The final summary shows a score from 0 to 100 calculated as: `(passed / total) *
 | 0 | No critical issues |
 | 2 | One or more critical issues found |
 
-### Plugin Audit (51 checks)
+### Plugin Audit (56 checks)
 
 The full TypeScript plugin audit covers everything the skill audit does, plus:
 
@@ -653,13 +654,51 @@ SecureClaw maps to all 10 categories of the [OWASP Agentic Security Initiative](
 
 ---
 
-## 11. Plugin CLI Reference
+## 11. Multi-Framework Coverage
+
+SecureClaw is the first security tool for OpenClaw to formally map controls to seven agentic security frameworks.
+
+| Framework | Coverage | Notes |
+|-----------|----------|-------|
+| OWASP ASI Top 10 | 10/10 categories | Full coverage across all categories |
+| MITRE ATLAS Agentic TTPs | 10/14 techniques | 2 industry-unsolved (prompt injection), 1 out-of-scope (model poisoning), 1 N/A |
+| MITRE ATLAS OpenClaw Investigation | 4/4 case studies, 14/17 techniques | All published OpenClaw attack scenarios addressed |
+| CoSAI Secure-by-Design Principles | 13/18 sub-requirements | 2 out-of-scope, 3 addressed in v2.1.0 |
+| CSA Singapore Agentic AI Addendum | 8/11 control areas | 2 out-of-scope (testing frameworks) |
+| **CSA MAESTRO** | **6/7 layers, 11/14 threats** | **7-layer agentic AI threat model. All audit checks tagged with MAESTRO layer.** |
+| **NIST AI 100-2 E2025** | **4/4 GenAI attack types, 9/12 subcategories** | **Adversarial ML taxonomy. All checks tagged with NIST attack type.** |
+
+### v2.2.0 Framework Additions
+
+| Addition | Framework | What Was Added |
+|----------|-----------|---------------|
+| MAESTRO layer tags | CSA MAESTRO | Every audit check tagged with MAESTRO layer (L1-L7). Cross-layer threat detection. |
+| NIST attack type tags | NIST AI 100-2 E2025 | Every audit check tagged with NIST GenAI attack type (evasion, poisoning, privacy, misuse). |
+| Cross-layer detection | CSA MAESTRO | Composite check flags when findings span multiple MAESTRO layers simultaneously. |
+| quick-audit.sh tags | MAESTRO + NIST | Shell audit output includes framework tags: `[ASI03\|L4\|evasion]` |
+| SKILL.md mapping | MAESTRO + NIST | Framework attribution comment mapping all 15 rules to MAESTRO layers and NIST types. |
+
+### v2.1.0 Gap Closures
+
+| Gap | Framework | What Was Added |
+|-----|-----------|---------------|
+| G1: Memory trust levels | MITRE ATLAS, CoSAI | Rule 13 (untrusted content), injection detection in cognitive files |
+| G2: Kill switch | CSA, CoSAI | Rule 14, `secureclaw kill` / `secureclaw resume` CLI, killswitch file check |
+| G3: Behavioral baseline | CoSAI | Tool call logging, frequency tracking, deviation detection |
+| G4: Graceful degradation | CoSAI, CSA | `failureMode` config: block_all, safe_mode, read_only |
+| G5: Reasoning telemetry | CoSAI | Rule 15 (state plan before multi-step operations) |
+| G7: Control token defense | MITRE AML.CS0051 | Audit check for default control tokens |
+| G8: Per-workload profiles | CoSAI, CSA | `riskProfile` config: strict, standard, permissive |
+
+---
+
+## 12. Plugin CLI Reference
 
 When the full plugin is installed, these commands are available:
 
 ### npx openclaw secureclaw audit
 
-Run the 51-check security audit.
+Run the 56-check security audit.
 
 | Flag | Effect |
 |------|--------|
@@ -702,7 +741,7 @@ Remove the SecureClaw skill. Performs a dry run by default; prompts for confirma
 
 ---
 
-## 12. Configuration
+## 13. Configuration
 
 ### Plugin Configuration
 
@@ -757,7 +796,7 @@ bash ~/.openclaw/skills/secureclaw/scripts/check-advisories.sh
 
 ---
 
-## 13. Background Monitors
+## 14. Background Monitors
 
 The plugin runs three background monitors when the gateway is active:
 
@@ -792,7 +831,7 @@ The `cost-report` CLI command shows hourly, daily, and monthly totals with a 30-
 
 ---
 
-## 14. Incident Response
+## 15. Incident Response
 
 If you suspect your agent has been compromised -- unexpected behavior, unfamiliar instructions in memory, unauthorized file changes, or unexplained external communications -- follow this procedure:
 
@@ -840,7 +879,7 @@ Then restart the gateway and monitor closely for the next 24 hours.
 
 ---
 
-## 15. Uninstalling
+## 16. Uninstalling
 
 ### Remove the skill only
 
@@ -866,7 +905,7 @@ Uninstall the plugin first, then remove the skill. The plugin does not depend on
 
 ---
 
-## 16. Frequently Asked Questions
+## 17. Frequently Asked Questions
 
 **How much context window does SecureClaw use?**
 
@@ -906,7 +945,7 @@ SecureClaw's skill scanner deliberately skips its own directory during scans bec
 
 ---
 
-## 17. Threat Model
+## 18. Threat Model
 
 SecureClaw is designed to defend against the following threat scenarios, ordered by likelihood in real-world deployments:
 
@@ -928,7 +967,7 @@ SecureClaw is designed to defend against the following threat scenarios, ordered
 
 ---
 
-## 18. Development
+## 19. Development
 
 ```sh
 # Install dependencies
